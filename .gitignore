@@ -1,0 +1,37 @@
+# Built application files / build output
+*.apk
+*.aar
+*.ap_
+*.aab
+/build
+/app/build
+**/build/
+
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Local configuration (machine-specific SDK path)
+local.properties
+
+# IntelliJ / Android Studio
+*.iml
+.idea/
+*.hprof
+captures/
+.externalNativeBuild/
+.cxx/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Keystore (do not commit signing keys)
+*.jks
+*.keystore
+
+# Misc
+/.kotlin/
