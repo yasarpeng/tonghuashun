@@ -75,8 +75,8 @@
 - 行情数据：新浪（实时/指数/五档）+ 腾讯（日K/分时/qt 扩展字段）公开接口；
 - 配色：严格对齐同花顺红涨绿跌，A 股用户一眼可信；
 - 图表：分时图 / 蜡烛图全部用 Compose Canvas 自绘，无第三方图表库；
-- 交易：本地撮合（委托价与现价比较，可成交即成交，否则挂单），撤单、成交记录齐全；
-- 隐私：账户与持仓只存在内存里，不上传，不真实交易。
+- 交易：全部按**你填的价格**成交（买入/卖出页与下单页都是"点了就成交、填多少按多少"），撤单、成交记录齐全；
+- 隐私：账户与持仓只存在**本机**（SharedPreferences），不上传、不联网同步，也不真实交易。
 
 ---
 
@@ -139,10 +139,14 @@ app/src/main/java/com/example/tonghuashun/
 │   │   ├── NetworkModule.kt     // Retrofit / OkHttp（统一带 Referer + UA）
 │   │   ├── QuoteDataSource.kt   // 网络调用（GBK / UTF-8 解码，失败返回空）
 │   │   └── QuoteParser.kt       // 新浪实时/五档/指数、腾讯 K线/分时/qt 解析
+│   ├── local/
+│   │   ├── LocalStore.kt            // 本地键值存储抽象（+ 纯内存兜底实现）
+│   │   ├── SharedPrefsLocalStore.kt // SharedPreferences 落盘实现（JSON 快照）
+│   │   └── LocalStoreModule.kt      // Hilt 提供 LocalStore
 │   └── repository/
 │       ├── StockRepository.kt       // 行情聚合：股票池、指数、搜索、K线、分时、盘口、扩展指标
-│       ├── TradeRepository.kt       // 本地模拟交易：资金、持仓、委托、撮合、成交
-│       └── WatchlistRepository.kt   // 内存自选股状态
+│       ├── TradeRepository.kt       // 本地模拟交易：资金、持仓、委托、撮合、成交（本地持久化）
+│       └── WatchlistRepository.kt   // 自选股状态（本地持久化）
 ├── navigation/
 │   ├── Destinations.kt          // Tab 与路由定义
 │   └── AppRoot.kt               // Scaffold + 底部导航 + NavHost
@@ -194,7 +198,7 @@ app/src/main/java/com/example/tonghuashun/
 
 - **行情来自公开接口**：股票池、指数、K线、分时、五档取自新浪 / 腾讯免费接口，行情随交易日实时变化；接口失败时对应区域显示 `—` 或"暂无数据"，不会崩溃。
 - **板块、资讯、理财内容为静态演示数据**，不随时间变化。
-- 交易为 **本地模拟撮合**（委托价与现价比较，可成交即成交，否则挂单等待），不执行任何真实交易逻辑；账户与持仓仅存内存，**重启 App 后重置**。
+- 交易为 **本地模拟**：下单一律**按你填写的价格成交**（不按现价），不执行任何真实交易逻辑；账户、持仓、委托、成交记录与自选股会**持久化到本机**（SharedPreferences），**退出 App 后再次打开仍然保留**。
 - 本项目仅用于技术学习，与同花顺官方无任何关联。
 
 ## 本轮优化记录（对照真机「同花顺 2」逐页录制后修正）
@@ -280,3 +284,38 @@ app/src/main/java/com/example/tonghuashun/
    同时写入一条"已成"委托与一条成交记录。买入扣资金、卖出扣持仓。
 
 > 本模块保留的唯一本地能力是「自定义总资产」，入口按真机结构收进 `多账号登录 → 账户管理`，不影响页面还原度。
+
+## 第六轮：本地持久化（退出 App 不再丢数据）
+
+此前账户与自选都只放在内存里，`TradeRepository` / `WatchlistRepository` 是 `@Singleton` + `MutableStateFlow`，
+一旦进程结束（返回键退出、被系统回收、强杀），资金、持仓、委托、成交、自选全部回到初始值。
+
+本轮加了最小改动的落盘能力：
+
+1. **新增 `data/local` 一层**：`LocalStore` 接口 + `SharedPrefsLocalStore`（SharedPreferences 存 JSON 快照）
+   + `LocalStoreModule`（Hilt 注入，`@ApplicationContext`）。不引入 Room / DataStore 等新依赖。
+2. **`TradeRepository` 持久化**：资金、冻结资金、持仓、委托、成交、自增 ID 序号在每次变更后写盘
+   （下单 / 撮合 / 撤单 / 立即成交 / 自定义总资产 / 重置账户），启动时自动恢复；
+   首次启动无快照时才按默认持仓（茅台 / 五粮液）播种。行情轮询触发的 `tryMatch` 只有真的产生成交才写盘，避免无谓 IO。
+3. **`WatchlistRepository` 持久化**：增删自选即写盘；清空后重启仍为空，不会又回退默认自选。
+4. **测试不受影响**：仓库保留一个无参构造（内部用 `NoOpLocalStore`），现有 14 个纯 JVM 测试照常运行；
+   另加 8 个持久化测试，用内存版 `LocalStore` 模拟"写盘 → 杀进程 → 重启读盘"，覆盖资金/持仓/挂单冻结/撤单/ID/自选等场景。
+
+> 写盘用 `SharedPreferences.commit()` 同步落盘（数据量只有几 KB），保证"操作返回即已持久化"。
+> 想回到出厂数据：交易首页「总资产」或 `多账号登录 → 账户管理` 里重置账户即可；自选直接删光即可。
+
+## 第七轮：成交价改为「按你填的价格」
+
+1. **问题**：交易页「买入/卖出」用的是 `executeImmediately`（按用户填的价成交），
+   但从**个股详情页 / 持仓行**进去的「下单页」走的是 `placeOrder`，成交价取的是**行情现价**，
+   所以填 8.88、现价 9.59 时，实际按 9.59 成交（且填低于现价的买价会变成挂单不成交）。
+2. **改法**：
+   - `TradeRepository.matchOrder()` 的成交价由 `marketPrice` 改为 `order.price`——撮合一律按委托价成交；
+   - `OrderViewModel.submit()` 改用 `executeImmediately()`，与交易页「买入/卖出」行为一致：
+     **点了就成交、填多少按多少**，不受现价与涨跌停限制。
+3. **代价**：下单页不再产生"未成交挂单"，撤单页会显示「无可撤委托」（仍会列出今日成交单）；`placeOrder` 的挂单撮合逻辑保留在仓库里。
+4. 版本号提升到 **1.1（versionCode 2）**，方便确认手机上装的是新包：系统设置 → 应用 → 同花顺 → 版本。
+
+> 持久化部分在 Android 模拟器（android-34，arm64）上做过完整验证：
+> 安装 → 加自选（招商银行）→ 买入浦发银行 100 股 @ 8.88 → `am force-stop` 杀进程 → 重开，
+> 持仓与自选都仍在；`shared_prefs/tonghuashun_local_store.xml` 中可见 `trade_account_snapshot` 与 `watchlist_codes` 两个快照。

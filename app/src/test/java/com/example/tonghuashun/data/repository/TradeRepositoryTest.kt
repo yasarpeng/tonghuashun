@@ -25,8 +25,8 @@ class TradeRepositoryTest {
     }
 
     @Test
-    fun `买入委托价高于市价立即全部成交`() {
-        // 委托价 12 >= 市价 10，应立即以市价 10 成交
+    fun `买入委托价高于市价时按委托价成交`() {
+        // 委托价 12 >= 市价 10，应立即成交；成交价取**委托价** 12（不再按市价 10）
         val result = repo.placeOrder(
             fullCode = "sh600000", code = "600000", name = "浦发银行",
             side = OrderSide.BUY, limitPrice = 12.0, shares = 100, marketPrice = 10.0,
@@ -35,18 +35,19 @@ class TradeRepositoryTest {
         val order = result.getOrThrow()
         assertEquals(OrderStatus.FILLED, order.status)
 
-        // 持仓增加 100 股，成本价为成交价 10
+        // 持仓增加 100 股，成本价 = 委托价 12
         val holding = repo.holdings.value.first { it.fullCode == "sh600000" }
         assertEquals(100L, holding.shares)
-        assertEquals(10.0, holding.costPrice, 0.001)
+        assertEquals(12.0, holding.costPrice, 0.001)
 
-        // 现金 = 100万 - 100*10 = 999000；无冻结（差额已退回）
-        assertEquals(999_000.0, repo.cash.value, 0.001)
+        // 现金 = 100万 - 100*12 = 998800；无冻结
+        assertEquals(998_800.0, repo.cash.value, 0.001)
         assertEquals(0.0, repo.frozenCash.value, 0.001)
 
         // 成交记录一条
         assertEquals(1, repo.trades.value.size)
         assertEquals(OrderSide.BUY, repo.trades.value.first().side)
+        assertEquals(12.0, repo.trades.value.first().price, 0.001)
     }
 
     @Test
@@ -149,13 +150,13 @@ class TradeRepositoryTest {
             fullCode = "sh600519", code = "600519", name = "贵州茅台",
             side = OrderSide.SELL, limitPrice = 1500.0, shares = 100, marketPrice = 1700.0,
         )
-        // 卖出委托价 1500 <= 市价 1700，以市价成交
+        // 卖出委托价 1500 <= 市价 1700，成交；成交价取**委托价** 1500
         assertTrue(result.isSuccess)
         assertEquals(OrderStatus.FILLED, result.getOrThrow().status)
         // 持仓清空
         assertNull(fresh.holdings.value.firstOrNull { it.fullCode == "sh600519" })
-        // 现金增加 100*1700
-        assertEquals(cashBefore + 100 * 1700.0, fresh.cash.value, 0.001)
+        // 现金增加 100*1500（按委托价，而不是市价 1700）
+        assertEquals(cashBefore + 100 * 1500.0, fresh.cash.value, 0.001)
     }
 
     @Test

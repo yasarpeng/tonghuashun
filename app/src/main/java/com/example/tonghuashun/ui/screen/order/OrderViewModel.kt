@@ -145,34 +145,33 @@ class OrderViewModel @Inject constructor(
         return p * _shares.value
     }
 
-    /** 提交委托，返回结果消息 */
+    /**
+     * 提交下单，返回结果消息。
+     *
+     * 采用"点了就成交"：**按你填写的价格**成交，不受现价与涨跌停限制，
+     * 与交易页「买入 / 卖出」页的行为保持一致——填 8.88 就按 8.88 成交，不会按现价成交。
+     */
     fun submit(): String {
         val stock = _uiState.value.stock ?: return "无行情"
         val p = if (_price.value > 0) _price.value else stock.price
         val qty = _shares.value
         if (qty <= 0) return "请输入委托数量"
-        val r = tradeRepository.placeOrder(
+        val r = tradeRepository.executeImmediately(
             fullCode = stock.fullCode,
             code = stock.code,
             name = stock.name,
             side = side,
-            limitPrice = p,
+            price = p,
             shares = qty,
-            marketPrice = stock.price,
         )
         return if (r.isSuccess) {
-            val o = r.getOrThrow()
             _shares.value = 0
             // 刷新可用
             _uiState.value = _uiState.value.copy(
                 available = tradeRepository.cash.value,
                 availableShares = tradeRepository.availableShares(stock.fullCode),
             )
-            when (o.status) {
-                OrderStatus.FILLED -> "委托已全部成交：${side.label} ${o.shares}股 ${o.name}"
-                OrderStatus.PARTIAL -> "已部分成交，剩余挂单中"
-                else -> "委托已提交，等待成交"
-            }
+            "%s成交 %d 股 @ %.2f（%s）".format(side.label, qty, p, stock.name)
         } else {
             r.exceptionOrNull()?.message ?: "委托失败"
         }

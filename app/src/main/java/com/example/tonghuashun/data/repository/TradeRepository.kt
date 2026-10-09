@@ -1,9 +1,12 @@
 package com.example.tonghuashun.data.repository
 
+import com.example.tonghuashun.data.local.LocalStore
+import com.example.tonghuashun.data.local.NoOpLocalStore
 import com.example.tonghuashun.data.model.Order
 import com.example.tonghuashun.data.model.OrderSide
 import com.example.tonghuashun.data.model.OrderStatus
 import com.example.tonghuashun.data.model.TradeRecord
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,18 +27,30 @@ data class Holding(
 )
 
 /**
- * 模拟交易账户（同花顺模拟盘思路）：本地内存记账，成交价使用真实行情价。
- * 支持委托挂单、撮合成交、撤单、成交记录。初始资金 100 万，重启后重置。
+ * 模拟交易账户（同花顺模拟盘思路）：本地记账，成交价使用真实行情价。
+ * 支持委托挂单、撮合成交、撤单、成交记录。初始资金 100 万。
  *
  * 撮合规则（模拟）：
- * - 买入委托价 >= 现价，或卖出委托价 <= 现价 -> 立即全部成交（可成交价）。
+ * - 买入委托价 >= 现价，或卖出委托价 <= 现价 -> 立即全部成交。
  * - 否则挂单等待，由 [tryMatch] 在行情刷新时撮合。
  * - 冻结资金/冻结持仓，撤单后释放。
+ * - **成交价一律取用户填报的委托价**（不用市价），这样"填多少就按多少成交"。
+ *
+ * 持久化：资金、冻结资金、持仓、委托、成交以及自增 ID 序号会在每次变更后
+ * 写入 [LocalStore]（App 运行时为 SharedPreferences），下次启动自动恢复，
+ * 因此退出 App 后再打开，账户数据不会重置。
  */
 @Singleton
-class TradeRepository @Inject constructor() {
+class TradeRepository @Inject constructor(
+    private val store: LocalStore,
+) {
+
+    /** 单元测试 / 无 Context 场景：纯内存运行，不落盘。 */
+    constructor() : this(NoOpLocalStore())
 
     private val initialCash = 1_000_000.0
+
+    private val gson = Gson()
 
     private val _cash = MutableStateFlow(initialCash)
     val cash: StateFlow<Double> = _cash.asStateFlow()
@@ -62,9 +77,51 @@ class TradeRepository @Inject constructor() {
     private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.CHINA)
 
     init {
-        // 扣除初始持仓成本，得到初始可用资金
+        restore()
+    }
+
+    /* ------------------------- 持久化 ------------------------- */
+
+    /** 账户快照：需要跨进程存活的最小数据集。字段都给默认值，方便旧数据平滑升级。 */
+    private data class TradeSnapshot(
+        val cash: Double = 0.0,
+        val frozenCash: Double = 0.0,
+        val holdings: List<Holding>? = null,
+        val orders: List<Order>? = null,
+        val trades: List<TradeRecord>? = null,
+        val idSeq: Long = 1000L,
+    )
+
+    /** 从本地快照恢复；首次启动（无快照）时按默认持仓播种，并立即写盘。 */
+    private fun restore() {
+        val snapshot = store.read(KEY_ACCOUNT)
+            ?.let { raw -> runCatching { gson.fromJson(raw, TradeSnapshot::class.java) }.getOrNull() }
+        if (snapshot != null) {
+            _cash.value = snapshot.cash
+            _frozenCash.value = snapshot.frozenCash
+            _holdings.value = snapshot.holdings ?: emptyList()
+            _orders.value = snapshot.orders ?: emptyList()
+            _trades.value = snapshot.trades ?: emptyList()
+            idGen.set(snapshot.idSeq)
+            return
+        }
+        // 首次启动：扣除初始持仓成本，得到初始可用资金
         val cost = _holdings.value.sumOf { it.shares * it.costPrice }
         _cash.value = initialCash - cost
+        persist()
+    }
+
+    /** 把当前账户快照写入本地存储。 */
+    private fun persist() {
+        val snapshot = TradeSnapshot(
+            cash = _cash.value,
+            frozenCash = _frozenCash.value,
+            holdings = _holdings.value,
+            orders = _orders.value,
+            trades = _trades.value,
+            idSeq = idGen.get(),
+        )
+        store.write(KEY_ACCOUNT, gson.toJson(snapshot))
     }
 
     private fun nowTime(): String = timeFmt.format(Date())
@@ -81,6 +138,7 @@ class TradeRepository @Inject constructor() {
         _holdings.value = emptyList()
         _orders.value = emptyList()
         _trades.value = emptyList()
+        persist()
     }
 
     /**
@@ -99,6 +157,7 @@ class TradeRepository @Inject constructor() {
         else _holdings.value.sumOf { it.shares * it.costPrice }
         _cash.value = (totalCapital - base).coerceAtLeast(0.0)
         _frozenCash.value = 0.0
+        persist()
     }
 
     /** 某只股票的可卖数量 */
@@ -108,7 +167,7 @@ class TradeRepository @Inject constructor() {
     /**
      * 提交委托单。
      * @param limitPrice 委托价（限价）
-     * @param marketPrice 当前行情价，用于撮合判断与实际成交价
+     * @param marketPrice 当前行情价，仅用于判断该委托能否立即成交
      */
     fun placeOrder(
         fullCode: String,
@@ -164,11 +223,12 @@ class TradeRepository @Inject constructor() {
 
         // 立即尝试撮合
         order = matchOrder(order, marketPrice)
+        persist()
         return Result.success(order)
     }
 
     /**
-     * 撮合单个委托。若可成交则按 marketPrice 成交，更新持仓/资金/成交记录。
+     * 撮合单个委托。若可成交则**按用户的委托价 [Order.price] 成交**，更新持仓/资金/成交记录。
      * @return 更新后的 order
      */
     private fun matchOrder(order: Order, marketPrice: Double): Order {
@@ -183,15 +243,12 @@ class TradeRepository @Inject constructor() {
 
         val fillShares = order.remainShares
         if (fillShares <= 0) return order
-        val fillPrice = marketPrice  // 以市价成交（对买方更有利/对卖方以市价）
+        val fillPrice = order.price  // 按用户填写的价格成交，不使用市价
 
         when (order.side) {
             OrderSide.BUY -> {
-                // 释放冻结资金（按委托价冻结），实际扣款按成交价，差额退回可用
-                val frozen = order.price * fillShares
-                val actual = fillPrice * fillShares
-                _frozenCash.value -= frozen
-                _cash.value += (frozen - actual)  // 退回差额（成交价<=委托价）
+                // 委托时已按委托价冻结资金；成交价与委托价一致，直接解冻即可
+                _frozenCash.value -= order.price * fillShares
                 addHoldingOnBuy(order.fullCode, order.name, fillShares, fillPrice)
             }
             OrderSide.SELL -> {
@@ -226,10 +283,13 @@ class TradeRepository @Inject constructor() {
     /** 行情刷新时，撮合所有挂单（未成交/部成的委托） */
     fun tryMatch(priceMap: Map<String, Double>) {
         val pending = _orders.value.filter { it.canCancel }
+        val tradesBefore = _trades.value.size
         pending.forEach { order ->
             val price = priceMap[order.fullCode] ?: return@forEach
             matchOrder(order, price)
         }
+        // 只有真的产生成交才值得写盘，避免行情轮询带来的无谓 IO
+        if (_trades.value.size != tradesBefore) persist()
     }
 
     /**
@@ -298,6 +358,7 @@ class TradeRepository @Inject constructor() {
                 timestamp = ts,
             ),
         ) + _trades.value
+        persist()
         return Result.success(order)
     }
 
@@ -321,6 +382,7 @@ class TradeRepository @Inject constructor() {
             }
         }
         replaceOrder(order.copy(status = OrderStatus.CANCELLED))
+        persist()
         return Result.success(Unit)
     }
 
@@ -372,5 +434,9 @@ class TradeRepository @Inject constructor() {
         val h = list[idx]
         list[idx] = h.copy(available = (h.available + shares).coerceAtMost(h.shares))
         _holdings.value = list
+    }
+
+    private companion object {
+        const val KEY_ACCOUNT = "trade_account_snapshot"
     }
 }
