@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.tonghuashun.util.QuoteFormat
 import javax.inject.Inject
 
 data class OrderUiState(
@@ -104,10 +105,11 @@ class OrderViewModel @Inject constructor(
     /** 价格步进（A股最小变动 0.01） */
     fun stepPrice(delta: Double) {
         val cur = if (_price.value > 0) _price.value else (_uiState.value.stock?.price ?: 0.0)
-        _price.value = (cur + delta).coerceAtLeast(0.01).let { "%.2f".format(it).toDouble() }
+        val tick = if (QuoteFormat.priceDecimals(fullCode) == 3) 0.001 else 0.01
+        _price.value = QuoteFormat.normalizedPrice(fullCode, (cur + delta).coerceAtLeast(tick))
     }
 
-    fun setPrice(v: Double) { _price.value = if (v < 0) 0.0 else v }
+    fun setPrice(v: Double) { _price.value = QuoteFormat.normalizedPrice(fullCode, if (v < 0) 0.0 else v) }
 
     fun setPriceToLevel(v: Double) { _price.value = v }
 
@@ -153,7 +155,7 @@ class OrderViewModel @Inject constructor(
      */
     fun submit(): String {
         val stock = _uiState.value.stock ?: return "无行情"
-        val p = if (_price.value > 0) _price.value else stock.price
+        val p = QuoteFormat.normalizedPrice(fullCode, if (_price.value > 0) _price.value else stock.price)
         val qty = _shares.value
         if (qty <= 0) return "请输入委托数量"
         val r = tradeRepository.executeImmediately(
@@ -171,7 +173,7 @@ class OrderViewModel @Inject constructor(
                 available = tradeRepository.cash.value,
                 availableShares = tradeRepository.availableShares(stock.fullCode),
             )
-            "%s成交 %d 股 @ %.2f（%s）".format(side.label, qty, p, stock.name)
+            "%s成交 %d 股 @ %s（%s）".format(side.label, qty, QuoteFormat.price(stock.code, p), stock.name)
         } else {
             r.exceptionOrNull()?.message ?: "委托失败"
         }

@@ -1,20 +1,23 @@
 package com.example.tonghuashun.ui.screen.news
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,10 +29,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,15 +41,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.tonghuashun.data.model.NewsItem
+import com.example.tonghuashun.ui.component.THSTabRow
 import com.example.tonghuashun.ui.theme.BackgroundGray
 import com.example.tonghuashun.ui.theme.CardWhite
 import com.example.tonghuashun.ui.theme.DividerGray
 import com.example.tonghuashun.ui.theme.StockDown
 import com.example.tonghuashun.ui.theme.StockUp
+import com.example.tonghuashun.ui.theme.THSLayout
+import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.ui.theme.TextPrimary
 import com.example.tonghuashun.ui.theme.TextSecondary
 import com.example.tonghuashun.ui.theme.TextTertiary
-import com.example.tonghuashun.ui.theme.THSRed
 
 private val topCategories = listOf("要闻", "快讯", "深度研究", "概念广场", "视")
 private val headlineTabs = listOf("头条", "PCB概念", "算力租赁", "脑机接口", "培育钻石")
@@ -58,7 +61,7 @@ fun NewsScreen(
     viewModel: NewsViewModel = hiltViewModel(),
 ) {
     val news by viewModel.news.collectAsStateWithLifecycle()
-    var category by remember { mutableIntStateOf(0) }
+    val category by viewModel.category.collectAsStateWithLifecycle()
     var headlineTab by remember { mutableIntStateOf(0) }
 
     LazyColumn(
@@ -66,78 +69,36 @@ fun NewsScreen(
             .fillMaxWidth()
             .background(BackgroundGray),
     ) {
-        item { NewsTopBar(category) { category = it } }
+        item { NewsTopBar(category) { viewModel.selectCategory(it) } }
         item { HeadlineTabRow(headlineTab) { headlineTab = it } }
         item { NumberedHeadlines(news) }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { TwoCardsRow() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         items(news, key = { it.id }) { item ->
             NewsFlowRow(item)
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(THSLayout.PageBottom)) }
     }
 }
 
 @Composable
 private fun NewsTopBar(selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(THSRed)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        LazyRow(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            items(topCategories.size) { i ->
-                Text(
-                    topCategories[i],
-                    color = if (i == selected) Color.White else Color(0xCCFFFFFF),
-                    fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = if (i == selected) 18.sp else 15.sp,
-                    modifier = Modifier.clickable { onSelect(i) },
-                )
-            }
-        }
-        Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(10.dp))
-        Icon(Icons.Filled.SmartToy, contentDescription = "AI", tint = Color.White, modifier = Modifier.size(22.dp))
+    Row(Modifier.fillMaxWidth().background(THSRed).heightIn(min = THSLayout.HeaderHeight),
+        verticalAlignment = Alignment.CenterVertically) {
+        THSTabRow(tabs = topCategories, selected = selected, onSelect = onSelect,
+            modifier = Modifier.weight(1f), scrollable = true, inverse = true, showIndicator = false,
+            minHeight = THSLayout.HeaderHeight)
+        Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White,
+            modifier = Modifier.padding(8.dp).size(24.dp))
+        Icon(Icons.Filled.SmartToy, contentDescription = "AI", tint = Color.White,
+            modifier = Modifier.padding(end = 16.dp).size(24.dp))
     }
 }
 
 @Composable
 private fun HeadlineTabRow(selected: Int, onSelect: (Int) -> Unit) {
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        items(headlineTabs.size) { i ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    headlineTabs[i],
-                    color = if (i == selected) TextPrimary else TextSecondary,
-                    fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = 16.sp,
-                    modifier = Modifier.clickable { onSelect(i) },
-                )
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .width(20.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (i == selected) THSRed else Color.Transparent),
-                )
-            }
-        }
-    }
+    THSTabRow(tabs = headlineTabs, selected = selected, onSelect = onSelect, scrollable = true)
 }
 
 @Composable
@@ -146,14 +107,14 @@ private fun NumberedHeadlines(news: List<NewsItem>) {
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
     ) {
         news.take(3).forEachIndexed { index, item ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { }
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = THSLayout.ContentPadding),
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
@@ -186,9 +147,9 @@ private fun NumberedHeadlines(news: List<NewsItem>) {
 private fun TwoCardsRow() {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .fillMaxWidth().height(IntrinsicSize.Min)
+            .padding(horizontal = THSLayout.PageGutter),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
         NewsSmallCard(
             title = "午间公告",
@@ -196,7 +157,7 @@ private fun TwoCardsRow() {
             highlightValue = "1.52%",
             highlightColor = StockUp,
             desc = "9月28日午间公告一览：风光股份营口厂区改造完成并恢复生产",
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
         NewsSmallCard(
             title = "图个明白",
@@ -204,7 +165,7 @@ private fun TwoCardsRow() {
             highlightValue = "-2.46%",
             highlightColor = StockDown,
             desc = "国庆节持股还是持币？复盘历次节后行情走势>>>",
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
     }
 }
@@ -220,7 +181,7 @@ private fun NewsSmallCard(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(THSLayout.CardRadius))
             .background(CardWhite)
             .clickable { }
             .padding(10.dp),
@@ -228,10 +189,10 @@ private fun NewsSmallCard(
         Text(title, color = THSRed, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(highlight, color = TextPrimary, fontSize = 12.sp, maxLines = 1)
-            Text(highlightValue, color = highlightColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(highlight, color = TextPrimary, fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f), overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(highlightValue, color = highlightColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         Text(desc, color = TextSecondary, fontSize = 11.sp, maxLines = 2)
     }
 }
@@ -243,7 +204,7 @@ private fun NewsFlowRow(item: NewsItem) {
             .fillMaxWidth()
             .background(CardWhite)
             .clickable { }
-            .padding(12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
         verticalAlignment = Alignment.Top,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -258,7 +219,7 @@ private fun NewsFlowRow(item: NewsItem) {
         Box(
             modifier = Modifier
                 .size(96.dp, 64.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(THSLayout.ControlRadius))
                 .background(BackgroundGray),
             contentAlignment = Alignment.Center,
         ) {

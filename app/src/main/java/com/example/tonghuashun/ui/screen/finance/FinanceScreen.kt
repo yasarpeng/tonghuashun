@@ -1,14 +1,19 @@
 package com.example.tonghuashun.ui.screen.finance
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,49 +21,38 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.tonghuashun.data.model.FinanceProduct
+import com.example.tonghuashun.ui.component.THSTabRow
 import com.example.tonghuashun.ui.theme.BackgroundGray
 import com.example.tonghuashun.ui.theme.CardWhite
 import com.example.tonghuashun.ui.theme.DividerGray
 import com.example.tonghuashun.ui.theme.StockUp
+import com.example.tonghuashun.ui.theme.THSLayout
+import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.ui.theme.TextPrimary
 import com.example.tonghuashun.ui.theme.TextSecondary
 import com.example.tonghuashun.ui.theme.TextTertiary
-import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.util.QuoteFormat
 
 private data class FinanceGridItem(val label: String, val icon: com.example.tonghuashun.ui.component.THSIcon, val badge: String? = null)
@@ -92,13 +86,13 @@ fun FinanceScreen(
     ) {
         item { FinanceTopBar() }
         item { RedPacketBanner() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { WelfareCardsRow() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { FinanceGrid() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { ActivityBanner() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { ProductTabRow(productTab) { productTab = it } }
         items(products, key = { it.name }) { product ->
             ProductRow(product)
@@ -106,7 +100,7 @@ fun FinanceScreen(
         }
         item { ViewAllButton() }
         item { NewUserFooter() }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(THSLayout.PageBottom)) }
     }
 }
 
@@ -116,23 +110,24 @@ private fun FinanceTopBar() {
         modifier = Modifier
             .fillMaxWidth()
             .background(THSRed)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .heightIn(min = THSLayout.HeaderHeight)
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
         Text("理财", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(34.dp)
-                .clip(RoundedCornerShape(17.dp))
+                .height(THSLayout.SearchHeight)
+                .clip(RoundedCornerShape(18.dp))
                 .background(Color.White)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = THSLayout.PageGutter),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
         ) {
             Icon(Icons.Filled.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
-            Text("假期享8天收益", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text("假期享8天收益", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Icon(Icons.Filled.Image, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
         }
         Icon(Icons.Filled.CardGiftcard, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
@@ -141,29 +136,25 @@ private fun FinanceTopBar() {
 
 @Composable
 private fun RedPacketBanner() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.horizontalGradient(listOf(Color(0xFFFF5A3C), Color(0xFFFF8A50)))
-            )
-            .padding(horizontal = 16.dp, vertical = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val largeText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+    val summary: @Composable () -> Unit = {
         Text("现金红包", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        Spacer(Modifier.width(10.dp))
-        Column(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFFFC93C))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        Column(Modifier.clip(RoundedCornerShape(THSLayout.CardRadius)).background(Color(0xFFFFC93C))
+            .padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("¥188", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold, fontSize = 22.sp)
             Text("仅一次机会", color = Color(0xFFB3261E), fontSize = 9.sp)
         }
-        Spacer(Modifier.width(10.dp))
-        Text("100%可得", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text("100%可得", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1)
+    }
+    val summaryModifier = Modifier.fillMaxWidth()
+        .background(Brush.horizontalGradient(listOf(Color(0xFFFF5A3C), Color(0xFFFF8A50))))
+        .padding(horizontal = THSLayout.PageGutter, vertical = 16.dp)
+    if (largeText) {
+        Column(summaryModifier, horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(THSLayout.ItemGap)) { summary() }
+    } else {
+        Row(summaryModifier, verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap)) { summary() }
     }
     Box(
         modifier = Modifier
@@ -189,12 +180,12 @@ private fun RedPacketBanner() {
 private fun WelfareCardsRow() {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .fillMaxWidth().height(IntrinsicSize.Min)
+            .padding(horizontal = THSLayout.PageGutter),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
-        WelfareCard("新人福利", "无门槛领0折卡", "申购基金没有手续费！", Modifier.weight(1f))
-        WelfareCard("股民福利", "Level-2免费领！", "学知识体验理财，最高领4个月！", Modifier.weight(1f))
+        WelfareCard("新人福利", "无门槛领0折卡", "申购基金没有手续费！", Modifier.weight(1f).fillMaxHeight())
+        WelfareCard("股民福利", "Level-2免费领！", "学知识体验理财，最高领4个月！", Modifier.weight(1f).fillMaxHeight())
     }
 }
 
@@ -202,15 +193,15 @@ private fun WelfareCardsRow() {
 private fun WelfareCard(tag: String, title: String, desc: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(THSLayout.CardRadius))
             .background(CardWhite)
             .clickable { }
-            .padding(12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
     ) {
         Text(tag, color = THSRed, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
         Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         Text(desc, color = TextTertiary, fontSize = 11.sp, maxLines = 2)
         Spacer(Modifier.height(8.dp))
         Text("去查看→", color = THSRed, fontSize = 12.sp, fontWeight = FontWeight.Medium)
@@ -219,43 +210,17 @@ private fun WelfareCard(tag: String, title: String, desc: String, modifier: Modi
 
 @Composable
 private fun FinanceGrid() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite)
-            .padding(vertical = 12.dp),
-    ) {
-        financeGridItems.chunked(5).forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                row.forEach { item ->
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(vertical = 8.dp)
-                            .clickable { },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Box(contentAlignment = Alignment.TopEnd) {
-                            com.example.tonghuashun.ui.component.THSFuncIcon(item.icon, size = 40.dp, corner = 10.dp)
-                            item.badge?.let {
-                                Text(
-                                    it,
-                                    color = Color.White,
-                                    fontSize = 7.sp,
-                                    maxLines = 1,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(THSRed)
-                                        .padding(horizontal = 3.dp, vertical = 1.dp),
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(item.label, fontSize = 11.sp, color = TextPrimary, maxLines = 1)
-                    }
-                }
+    com.example.tonghuashun.ui.component.THSFunctionGrid(financeGridItems) { item ->
+        Box(contentAlignment = Alignment.TopEnd) {
+            com.example.tonghuashun.ui.component.THSFuncIcon(item.icon, size = 44.dp, corner = 12.dp)
+            item.badge?.let {
+                Text(it, color = Color.White, fontSize = 7.sp, maxLines = 1,
+                    modifier = Modifier.clip(RoundedCornerShape(THSLayout.ControlRadius)).background(THSRed)
+                        .padding(horizontal = 3.dp, vertical = 1.dp))
             }
         }
+        Text(item.label, fontSize = 11.sp, color = TextPrimary, maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
@@ -264,8 +229,8 @@ private fun ActivityBanner() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .padding(horizontal = THSLayout.PageGutter)
+            .clip(RoundedCornerShape(THSLayout.CardRadius))
             .background(
                 Brush.horizontalGradient(listOf(Color(0xFFE63946), Color(0xFFFF6B5C)))
             )
@@ -282,7 +247,7 @@ private fun ActivityBanner() {
             modifier = Modifier
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.White)
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .padding(horizontal = THSLayout.PageGutter, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("查看", color = THSRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
@@ -293,33 +258,7 @@ private fun ActivityBanner() {
 
 @Composable
 private fun ProductTabRow(selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        productTabs.forEachIndexed { i, tab ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    tab,
-                    color = if (i == selected) TextPrimary else TextSecondary,
-                    fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.clickable { onSelect(i) },
-                )
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .width(20.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (i == selected) THSRed else Color.Transparent),
-                )
-            }
-        }
-    }
+    THSTabRow(tabs = productTabs, selected = selected, onSelect = onSelect)
 }
 
 @Composable
@@ -329,11 +268,11 @@ private fun ProductRow(product: FinanceProduct) {
             .fillMaxWidth()
             .background(CardWhite)
             .clickable { }
-            .padding(12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap)) {
                 Text(product.name, color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
                 product.tag?.let {
                     Text(
@@ -376,7 +315,7 @@ private fun ViewAllButton() {
                 .clip(RoundedCornerShape(24.dp))
                 .background(THSRed)
                 .clickable { }
-                .padding(vertical = 14.dp),
+                .padding(vertical = THSLayout.ContentPadding),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
     }
@@ -389,7 +328,7 @@ private fun NewUserFooter() {
             .fillMaxWidth()
             .background(CardWhite)
             .clickable { }
-            .padding(horizontal = 12.dp, vertical = 14.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("新人福利", color = TextPrimary, style = MaterialTheme.typography.bodyMedium)

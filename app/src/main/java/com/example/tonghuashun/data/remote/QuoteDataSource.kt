@@ -2,6 +2,7 @@ package com.example.tonghuashun.data.remote
 
 import com.example.tonghuashun.data.model.KLineEntry
 import com.example.tonghuashun.data.model.MarketIndex
+import com.example.tonghuashun.data.model.NewsItem
 import com.example.tonghuashun.data.model.OrderBook
 import com.example.tonghuashun.data.model.QuoteExtra
 import com.example.tonghuashun.data.model.Stock
@@ -22,6 +23,7 @@ class QuoteDataSource @Inject constructor(
     private val sinaApi: SinaApi,
     private val tencentApi: TencentApi,
     private val tencentQtApi: TencentQtApi,
+    private val sinaNewsApi: SinaNewsApi,
 ) {
     private val gbk: Charset = Charset.forName("GBK")
 
@@ -103,6 +105,23 @@ class QuoteDataSource @Inject constructor(
             QuoteParser.parseTencentMinute(json, fullCode) to QuoteParser.parseTencentMinutePrevClose(json, fullCode)
         } catch (e: Exception) {
             emptyList<TimeShareEntry>() to 0.0
+        }
+    }
+
+    /**
+     * 新浪 7x24 资讯直播。zhiboId=152 为财经全球直播，tagId 用于分类过滤（0=全部）。
+     * 返回已解析的资讯列表，失败返回空（由上层回退）。
+     */
+    suspend fun getNews(
+        zhiboId: Int = 152,
+        tagId: Int = 0,
+        pageSize: Int = 20,
+    ): List<NewsItem> = withContext(Dispatchers.IO) {
+        try {
+            val json = decodeUtf8(sinaNewsApi.getFeed(zhiboId = zhiboId, tagId = tagId, pageSize = pageSize))
+            QuoteParser.parseSinaNews(json)
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 }

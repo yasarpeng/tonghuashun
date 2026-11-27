@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.tonghuashun.ui.theme.BackgroundGray
-import com.example.tonghuashun.ui.theme.TextSecondary
+import com.example.tonghuashun.ui.theme.THSLayout
 import com.example.tonghuashun.ui.theme.THSRed
+import com.example.tonghuashun.ui.theme.TextSecondary
 
 /** 仿同花顺顶部品牌栏 + 搜索框 */
 @Composable
@@ -29,9 +30,10 @@ fun THSTopBar(title: String) {
         modifier = Modifier
             .fillMaxWidth()
             .background(THSRed)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .heightIn(min = THSLayout.HeaderHeight)
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
         Text(
             text = title,
@@ -41,12 +43,12 @@ fun THSTopBar(title: String) {
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(34.dp)
-                .clip(RoundedCornerShape(17.dp))
+                .height(THSLayout.SearchHeight)
+                .clip(RoundedCornerShape(18.dp))
                 .background(Color.White)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = THSLayout.PageGutter),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
         ) {
             Icon(
                 imageVector = Icons.Filled.Search,
@@ -58,6 +60,7 @@ fun THSTopBar(title: String) {
                 text = "搜索股票 / 代码 / 拼音",
                 color = TextSecondary,
                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
         }
     }

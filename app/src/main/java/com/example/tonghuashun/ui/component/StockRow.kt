@@ -2,6 +2,7 @@ package com.example.tonghuashun.ui.component
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,10 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,9 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tonghuashun.data.model.Stock
 import com.example.tonghuashun.ui.theme.BackgroundGray
-import com.example.tonghuashun.ui.theme.TextTertiary
+import com.example.tonghuashun.ui.theme.THSLayout
 import com.example.tonghuashun.ui.theme.TextPrimary
 import com.example.tonghuashun.ui.theme.TextSecondary
+import com.example.tonghuashun.ui.theme.TextTertiary
 import com.example.tonghuashun.util.QuoteFormat
 
 /** 行情/自选股列表的一行：名称+代码 | 最新价 | 涨跌幅色块 */
@@ -45,11 +47,12 @@ fun StockRow(
     onClick: () -> Unit,
 ) {
     val color = QuoteFormat.colorOf(stock.change)
-    Row(
+    THSDataRow(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = THSLayout.RowHeight)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1.4f)) {
@@ -59,6 +62,7 @@ fun StockRow(
                 fontWeight = FontWeight.Medium,
                 color = TextPrimary,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = stock.code,
@@ -67,7 +71,7 @@ fun StockRow(
             )
         }
         Text(
-            text = QuoteFormat.price(stock.price),
+            text = QuoteFormat.price(stock.code, stock.price),
             style = MaterialTheme.typography.bodyLarge,
             color = color,
             textAlign = TextAlign.End,
@@ -83,7 +87,7 @@ fun StockRow(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .width(78.dp)
+                    .width(84.dp * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f))
                     .clip(RoundedCornerShape(4.dp))
                     .background(color)
                     .padding(vertical = 6.dp),
@@ -106,11 +110,12 @@ fun WatchStockRow(
     onClick: () -> Unit,
 ) {
     val color = QuoteFormat.colorOf(stock.change)
-    Row(
+    THSDataRow(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = THSLayout.RowHeight)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1.25f)) {
@@ -122,7 +127,7 @@ fun WatchStockRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(THSLayout.SmallGap))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!stock.code.isFundCode()) {
                     TagChip(text = "融", color = Color(0xFFE08A2E), filled = false)
@@ -154,13 +159,13 @@ fun WatchStockRow(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .width(84.dp)
+                    .width(84.dp * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f))
                     .clip(RoundedCornerShape(4.dp))
                     .background(color)
                     .padding(vertical = 6.dp),
             )
             Text(
-                text = QuoteFormat.price(stock.price),
+                text = QuoteFormat.price(stock.code, stock.price),
                 style = MaterialTheme.typography.labelSmall,
                 color = TextSecondary,
                 modifier = Modifier.padding(top = 3.dp),

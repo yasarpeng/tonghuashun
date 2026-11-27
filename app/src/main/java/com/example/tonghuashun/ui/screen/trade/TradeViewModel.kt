@@ -12,6 +12,7 @@ import com.example.tonghuashun.data.model.TradeRecord
 import com.example.tonghuashun.data.repository.Holding
 import com.example.tonghuashun.data.repository.StockRepository
 import com.example.tonghuashun.data.repository.TradeRepository
+import com.example.tonghuashun.util.TradeHistory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -31,7 +32,15 @@ data class TradeUiState(
     val positions: List<Position> = emptyList(),
     val orders: List<Order> = emptyList(),
     val trades: List<TradeRecord> = emptyList(),
+    val now: Long = System.currentTimeMillis(),
 ) {
+    private val history = TradeHistory(now)
+    private val groupedOrders = orders.partition { !history.contains(it.timestamp) }
+    private val groupedTrades = trades.partition { !history.contains(it.timestamp) }
+    val todayOrders: List<Order> get() = groupedOrders.first
+    val todayTrades: List<TradeRecord> get() = groupedTrades.first
+    val historyOrders: List<Order> get() = groupedOrders.second
+    val historyTrades: List<TradeRecord> get() = groupedTrades.second
     val marketValue: Double get() = positions.sumOf { it.marketValue }
     val totalAsset: Double get() = cash + frozenCash + marketValue
     val totalProfit: Double get() = positions.sumOf { it.profit }
@@ -100,14 +109,17 @@ class TradeViewModel @Inject constructor(
             AccountSnapshot(cash, frozen, holdings, orders, trades)
         }
 
+    private val currentTime = MutableStateFlow(System.currentTimeMillis())
+
     val uiState: StateFlow<TradeUiState> =
-        combine(accountSnapshot, _priceMap) { snap, prices ->
+        combine(accountSnapshot, _priceMap, currentTime) { snap, prices, now ->
             TradeUiState(
                 cash = snap.cash,
                 frozenCash = snap.frozenCash,
                 positions = snap.holdings.map { toPosition(it, prices[it.fullCode]) },
                 orders = snap.orders,
                 trades = snap.trades,
+                now = now,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TradeUiState())
 
@@ -115,6 +127,7 @@ class TradeViewModel @Inject constructor(
         // 定时刷新行情并撮合挂单
         viewModelScope.launch {
             while (true) {
+                currentTime.value = System.currentTimeMillis()
                 refreshAndMatch()
                 refreshOrderForm()
                 delay(4000)

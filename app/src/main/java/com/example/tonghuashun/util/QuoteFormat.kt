@@ -1,5 +1,6 @@
 package com.example.tonghuashun.util
 
+import java.util.Locale
 import androidx.compose.ui.graphics.Color
 import com.example.tonghuashun.ui.theme.StockDown
 import com.example.tonghuashun.ui.theme.StockFlat
@@ -16,6 +17,16 @@ object QuoteFormat {
 
     /** 价格保留两位 */
     fun price(v: Double): String = "%.2f".format(v)
+
+    /** ETF/LOF 报价三位小数，普通股票两位。接受带市场前缀或六位代码。 */
+    fun priceDecimals(code: String): Int {
+        val symbol = code.removePrefix("sh").removePrefix("sz")
+        return if (symbol.startsWith("5") || symbol.startsWith("15") || symbol.startsWith("16") || symbol.startsWith("18")) 3 else 2
+    }
+
+    fun price(code: String, value: Double): String = String.format(Locale.CHINA, "%.${priceDecimals(code)}f", value)
+
+    fun normalizedPrice(code: String, value: Double): Double = price(code, value).toDouble()
 
     /** 带正负号的涨跌额 */
     fun signed(v: Double): String = (if (v > 0) "+" else "") + "%.2f".format(v)

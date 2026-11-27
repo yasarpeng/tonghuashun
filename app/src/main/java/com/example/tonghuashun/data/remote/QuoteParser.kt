@@ -2,6 +2,7 @@ package com.example.tonghuashun.data.remote
 
 import com.example.tonghuashun.data.model.KLineEntry
 import com.example.tonghuashun.data.model.MarketIndex
+import com.example.tonghuashun.data.model.NewsItem
 import com.example.tonghuashun.data.model.OrderBook
 import com.example.tonghuashun.data.model.OrderBookLevel
 import com.example.tonghuashun.data.model.QuoteExtra
@@ -210,5 +211,80 @@ object QuoteParser {
             pb = d(46),
             volumeRatio = d(49),
         )
+    }
+
+    /**
+     * 解析新浪 7x24 直播资讯 JSON。
+     * 结构: result.data.feed.list[] -> { id, rich_text, create_time, tag:[{name}] }
+     * rich_text 形如「【标题】正文…」，取【】内为标题，无括号则截断前 40 字为标题。
+     * source 取第一个 tag 名称（如「公司」「市场」），没有则用「新浪财经」。
+     * time 由 create_time(yyyy-MM-dd HH:mm:ss) 换算为相对时间（刚刚/几分钟前/几小时前/MM-dd）。
+     */
+    fun parseSinaNews(json: String, nowMillis: Long = System.currentTimeMillis()): List<NewsItem> {
+        return try {
+            val list = JSONObject(json)
+                .getJSONObject("result")
+                .getJSONObject("data")
+                .getJSONObject("feed")
+                .getJSONArray("list")
+            val result = ArrayList<NewsItem>(list.length())
+            for (i in 0 until list.length()) {
+                val o = list.getJSONObject(i)
+                val rich = o.optString("rich_text").trim()
+                if (rich.isEmpty()) continue
+                val id = o.optString("id", i.toString())
+                val createTime = o.optString("create_time")
+
+                val lb = rich.indexOf('【')
+                val rb = rich.indexOf('】')
+                val title: String
+                if (lb == 0 && rb > lb) {
+                    title = rich.substring(lb + 1, rb)
+                } else {
+                    title = if (rich.length > 40) rich.substring(0, 40) + "…" else rich
+                }
+
+                var source = "新浪财经"
+                val tags = o.optJSONArray("tag")
+                if (tags != null && tags.length() > 0) {
+                    val name = tags.getJSONObject(0).optString("name")
+                    if (name.isNotEmpty()) source = name
+                }
+
+                // 7x24 直播项末尾常带「（来源）」，若有则作为来源更贴近真机
+                val srcMatch = Regex("（([^（）]{2,10})）\\s*$").find(rich)
+                if (srcMatch != null) source = srcMatch.groupValues[1]
+
+                result.add(
+                    NewsItem(
+                        id = id,
+                        title = title,
+                        source = source,
+                        time = relativeTime(createTime, nowMillis),
+                    )
+                )
+            }
+            result
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /** yyyy-MM-dd HH:mm:ss -> 相对时间字符串 */
+    private fun relativeTime(createTime: String, nowMillis: Long): String {
+        if (createTime.isBlank()) return ""
+        return try {
+            val fmt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.CHINA)
+            val t = fmt.parse(createTime)?.time ?: return createTime
+            val diff = nowMillis - t
+            when {
+                diff < 60_000 -> "刚刚"
+                diff < 3_600_000 -> "${diff / 60_000}分钟前"
+                diff < 86_400_000 -> "${diff / 3_600_000}小时前"
+                else -> createTime.substring(5, 10) // MM-dd
+            }
+        } catch (e: Exception) {
+            createTime
+        }
     }
 }

@@ -22,7 +22,7 @@ data class Holding(
     val fullCode: String,
     val name: String,
     val shares: Long,
-    val available: Long,      // 可用（可卖）数量。当日买入 T+1，次日才可卖，这里简化为买入即冻结当日
+    val available: Long,      // 可用（可卖）数量。模拟盘支持「秒买秒卖」，买入即可卖
     val costPrice: Double,
 )
 
@@ -399,10 +399,11 @@ class TradeRepository @Inject constructor(
             val h = list[idx]
             val newShares = h.shares + shares
             val newCost = (h.costPrice * h.shares + price * shares) / newShares
-            // 当日买入 T+1，不增加 available
-            list[idx] = h.copy(shares = newShares, costPrice = newCost)
+            // 模拟盘「秒买秒卖」：当日买入即可卖，available 同步增加
+            list[idx] = h.copy(shares = newShares, available = h.available + shares, costPrice = newCost)
         } else {
-            list.add(Holding(fullCode, name, shares, 0, price))
+            // 模拟盘「秒买秒卖」：买入即全部可卖
+            list.add(Holding(fullCode, name, shares, shares, price))
         }
         _holdings.value = list
     }

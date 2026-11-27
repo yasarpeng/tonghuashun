@@ -121,21 +121,25 @@ class TradeRepositoryTest {
     }
 
     @Test
-    fun `卖出成交增加现金并减少持仓`() {
-        // 先建立可卖持仓：直接用 setTotalCapitalKeepingHoldings 不行（空仓），改为买入后手动放开可用
-        // 通过 buildHoldingWithAvailable 模拟 T+1 后可卖：这里用 resetAccount 再注入
+    fun `当日买入即可卖（秒买秒卖）`() {
         repo.resetAccount(1_000_000.0)
-        // 买入成交（当日不可卖），再模拟次日可卖：直接卖出应因可用不足失败
+        // 买入成交
         repo.placeOrder(
             fullCode = "sh600000", code = "600000", name = "浦发银行",
             side = OrderSide.BUY, limitPrice = 10.0, shares = 200, marketPrice = 10.0,
         )
-        // 当日买入 available=0，卖出应失败
-        val failSell = repo.placeOrder(
+        // 模拟盘「秒买秒卖」：买入即全部可卖
+        assertEquals(200L, repo.availableShares("sh600000"))
+        val cashBeforeSell = repo.cash.value
+        val sell = repo.placeOrder(
             fullCode = "sh600000", code = "600000", name = "浦发银行",
             side = OrderSide.SELL, limitPrice = 10.0, shares = 100, marketPrice = 10.0,
         )
-        assertTrue("当日买入不可卖(T+1)", failSell.isFailure)
+        assertTrue("当日买入可卖(秒买秒卖)", sell.isSuccess)
+        assertEquals(OrderStatus.FILLED, sell.getOrThrow().status)
+        // 卖出 100 股 @10 回款，剩余持仓 100 股仍可卖
+        assertEquals(cashBeforeSell + 100 * 10.0, repo.cash.value, 0.001)
+        assertEquals(100L, repo.availableShares("sh600000"))
     }
 
     @Test

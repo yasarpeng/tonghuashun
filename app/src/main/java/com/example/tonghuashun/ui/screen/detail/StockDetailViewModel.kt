@@ -3,6 +3,7 @@ package com.example.tonghuashun.ui.screen.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.tonghuashun.data.model.MarketIndex
 import com.example.tonghuashun.data.model.KLineEntry
 import com.example.tonghuashun.data.model.NewsItem
 import com.example.tonghuashun.data.model.OrderBook
@@ -51,6 +52,7 @@ data class DetailUiState(
     val orderBook: OrderBook = OrderBook(emptyList(), emptyList()),
     val news: List<NewsItem> = emptyList(),
     val message: String? = null,
+    val referenceIndex: MarketIndex? = null,
 ) {
     fun klineOf(period: ChartPeriod): List<KLineEntry> = when (period) {
         ChartPeriod.WEEK_K -> weeklyKline
@@ -99,6 +101,10 @@ class StockDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(loading = true)
             // 5 个接口（实时/扩展/日K/分时/五档）彼此独立，并发请求，避免串行等待
+            val referenceTask = async {
+                if (fullCode == "sh510980") runCatching { stockRepository.getIndices().firstOrNull { it.code == "sh000001" || it.code == "000001" } }.getOrNull()
+                else null
+            }
             val stockTask = async { stockRepository.getStock(fullCode) }
             val extraTask = async { stockRepository.getQuoteExtra(fullCode) }
             val klineTask = async { stockRepository.getDailyKLine(fullCode) }
@@ -113,6 +119,7 @@ class StockDetailViewModel @Inject constructor(
             _uiState.value = DetailUiState(
                 loading = false,
                 stock = stock,
+                referenceIndex = referenceTask.await(),
                 extra = extra,
                 dailyKline = daily,
                 weeklyKline = aggregate(daily, ChartPeriod.WEEK_K),
@@ -134,6 +141,10 @@ class StockDetailViewModel @Inject constructor(
     private suspend fun refreshQuote() {
         if (_uiState.value.stock == null) return
         coroutineScope {
+            val referenceTask = async {
+                if (fullCode == "sh510980") runCatching { stockRepository.getIndices().firstOrNull { it.code == "sh000001" || it.code == "000001" } }.getOrNull()
+                else null
+            }
             val stockTask = async { stockRepository.getStock(fullCode) }
             val extraTask = async { stockRepository.getQuoteExtra(fullCode) }
             val orderBookTask = async { stockRepository.getOrderBook(fullCode) }
@@ -146,6 +157,7 @@ class StockDetailViewModel @Inject constructor(
             val prev = _uiState.value
             _uiState.value = prev.copy(
                 stock = stock,
+                referenceIndex = referenceTask.await() ?: prev.referenceIndex,
                 extra = extra ?: prev.extra,
                 orderBook = if (ob.asks.isEmpty() && ob.bids.isEmpty()) prev.orderBook else ob,
                 timeShare = if (ts.isEmpty()) prev.timeShare else ts,
@@ -153,6 +165,10 @@ class StockDetailViewModel @Inject constructor(
             )
         }
     }
+
+    fun adjacentCode(direction: Int): String? = adjacentQuoteCode(watchlistRepository.codes.value.toList(), fullCode, direction)
+
+    suspend fun searchStocks(query: String): List<Stock> = stockRepository.searchStocks(query)
 
     fun toggleFavorite() = watchlistRepository.toggle(fullCode)
 

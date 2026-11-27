@@ -45,3 +45,21 @@ interface TencentQtApi {
         @Url url: String,
     ): ResponseBody
 }
+
+/**
+ * 新浪财经 7x24 直播资讯接口（UTF-8 JSON）。
+ * zhibo_id=152 为财经全球直播（与同花顺 7x24 快讯同源）。
+ * tag_id 用于分类过滤（0=全部）。
+ * 示例: https://zhibo.sina.com.cn/api/zhibo/feed?page=1&page_size=20&zhibo_id=152&tag_id=0&dire=f&dpc=1
+ */
+interface SinaNewsApi {
+    @GET("api/zhibo/feed")
+    suspend fun getFeed(
+        @Query("zhibo_id") zhiboId: Int = 152,
+        @Query("tag_id") tagId: Int = 0,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 20,
+        @Query("dire") dire: String = "f",
+        @Query("dpc") dpc: Int = 1,
+    ): ResponseBody
+}

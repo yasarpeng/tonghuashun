@@ -1,5 +1,7 @@
 package com.example.tonghuashun.ui.screen.home
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,36 +21,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ShowChart
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,14 +45,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.tonghuashun.data.model.NewsItem
 import com.example.tonghuashun.data.model.Stock
+import com.example.tonghuashun.ui.component.THSTabRow
 import com.example.tonghuashun.ui.theme.BackgroundGray
 import com.example.tonghuashun.ui.theme.CardWhite
 import com.example.tonghuashun.ui.theme.DividerGray
 import com.example.tonghuashun.ui.theme.StockUp
+import com.example.tonghuashun.ui.theme.THSLayout
+import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.ui.theme.TextPrimary
 import com.example.tonghuashun.ui.theme.TextSecondary
 import com.example.tonghuashun.ui.theme.TextTertiary
-import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.util.QuoteFormat
 
 private data class HomeGridItem(val label: String, val icon: com.example.tonghuashun.ui.component.THSIcon)
@@ -97,11 +89,11 @@ fun HomeScreen(
     ) {
         item { HomeTopBar() }
         item { FunctionGrid() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { HorizontalCards() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { RealtimeHotCard() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item {
             TodayPlayCard(
                 hotStocks = state.hotStocks,
@@ -110,12 +102,12 @@ fun HomeScreen(
                 limitUpCount = state.limitUpCount,
             )
         }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { NewsTabBar(newsTab) { newsTab = it } }
         items(state.news, key = { it.id }) { news ->
             HomeNewsRow(news)
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(THSLayout.PageBottom)) }
     }
 }
 
@@ -125,13 +117,14 @@ private fun HomeTopBar() {
         modifier = Modifier
             .fillMaxWidth()
             .background(THSRed)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .heightIn(min = THSLayout.HeaderHeight)
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(THSLayout.ControlRadius))
                 .background(Color(0x33FFFFFF))
                 .padding(horizontal = 6.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -141,16 +134,16 @@ private fun HomeTopBar() {
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(34.dp)
-                .clip(RoundedCornerShape(17.dp))
+                .height(THSLayout.SearchHeight)
+                .clip(RoundedCornerShape(18.dp))
                 .background(Color.White)
-                .padding(horizontal = 10.dp),
+                .padding(horizontal = THSLayout.PageGutter),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
         ) {
             Icon(Icons.Filled.QrCodeScanner, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
             Box(Modifier.width(1.dp).height(16.dp).background(DividerGray))
-            Text("5g行业股东增持战法", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text("5g行业股东增持战法", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Icon(Icons.Filled.Search, contentDescription = "搜索", tint = TextSecondary, modifier = Modifier.size(18.dp))
         }
         Icon(Icons.Filled.SmartToy, contentDescription = "AI", tint = Color.White, modifier = Modifier.size(24.dp))
@@ -160,29 +153,10 @@ private fun HomeTopBar() {
 
 @Composable
 private fun FunctionGrid() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite)
-            .padding(vertical = 12.dp),
-    ) {
-        homeGridItems.chunked(5).forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                row.forEach { item ->
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(vertical = 8.dp)
-                            .clickable { },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        com.example.tonghuashun.ui.component.THSFuncIcon(item.icon, size = 44.dp, corner = 12.dp)
-                        Spacer(Modifier.height(6.dp))
-                        Text(item.label, fontSize = 11.sp, color = TextPrimary, maxLines = 1)
-                    }
-                }
-            }
-        }
+    com.example.tonghuashun.ui.component.THSFunctionGrid(homeGridItems) { item ->
+        com.example.tonghuashun.ui.component.THSFuncIcon(item.icon, size = 44.dp, corner = 12.dp)
+        Text(item.label, fontSize = 11.sp, color = TextPrimary, maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
@@ -194,8 +168,8 @@ private fun HorizontalCards() {
         Triple("投资必读", "A股午评：开低走大...", "A股午评"),
     )
     LazyRow(
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = THSLayout.PageGutter),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
         items(cards) { (title, sub, tail) ->
             Column(
@@ -204,7 +178,7 @@ private fun HorizontalCards() {
                     .clip(RoundedCornerShape(10.dp))
                     .background(CardWhite)
                     .clickable { }
-                    .padding(12.dp),
+                    .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -214,9 +188,9 @@ private fun HorizontalCards() {
                     Text(title, fontWeight = FontWeight.Bold, color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
                     Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(18.dp))
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(THSLayout.ItemGap))
                 Text(sub, color = TextSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(THSLayout.ItemGap))
                 Text(tail, color = StockUp, style = MaterialTheme.typography.bodyMedium)
             }
         }
@@ -229,7 +203,7 @@ private fun RealtimeHotCard() {
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -243,7 +217,7 @@ private fun RealtimeHotCard() {
             }
             Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(18.dp))
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("英伟达加码玻璃基板", color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.width(6.dp))
@@ -271,7 +245,7 @@ private fun TodayPlayCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -285,7 +259,7 @@ private fun TodayPlayCard(
             }
             Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(18.dp))
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "1",
@@ -301,23 +275,23 @@ private fun TodayPlayCard(
             Spacer(Modifier.width(6.dp))
             Text("-2.83%", color = com.example.tonghuashun.ui.theme.StockDown, style = MaterialTheme.typography.bodyMedium)
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         Text("特斯拉近几个月已将其Optimus人形机器人的产量提升...", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         // 左右双栏：相关个股 | 涨跌分布（对齐同花顺首页"今天炒什么"卡片）
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(THSLayout.CardRadius))
                     .background(BackgroundGray)
                     .padding(10.dp),
             ) {
                 Text("相关个股", fontWeight = FontWeight.Bold, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(THSLayout.ItemGap))
                 hotStocks.take(3).forEach { s ->
                     Row(
                         modifier = Modifier
@@ -338,7 +312,7 @@ private fun TodayPlayCard(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(THSLayout.CardRadius))
                     .background(BackgroundGray)
                     .padding(10.dp),
             ) {
@@ -378,33 +352,7 @@ private fun TodayPlayCard(
 
 @Composable
 private fun NewsTabBar(selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        newsTabs.forEachIndexed { i, tab ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    tab,
-                    color = if (i == selected) TextPrimary else TextSecondary,
-                    fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.clickable { onSelect(i) },
-                )
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .width(20.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (i == selected) THSRed else Color.Transparent),
-                )
-            }
-        }
-    }
+    THSTabRow(tabs = newsTabs, selected = selected, onSelect = onSelect)
 }
 
 @Composable
@@ -414,7 +362,7 @@ private fun HomeNewsRow(news: NewsItem) {
             .fillMaxWidth()
             .background(CardWhite)
             .clickable { }
-            .padding(12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -446,7 +394,7 @@ private fun HomeNewsRow(news: NewsItem) {
             }
             Text(news.title, color = TextPrimary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         androidx.compose.material3.HorizontalDivider(color = DividerGray)
     }
 }

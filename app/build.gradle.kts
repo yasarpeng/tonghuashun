@@ -91,6 +91,8 @@ dependencies {
 
     // Test
     testImplementation("junit:junit:4.13.2")
+    // 本地 JVM 单元测试里 android 自带的 org.json 是桩实现（抛异常），引入真实实现以验证解析逻辑
+    testImplementation("org.json:json:20240303")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

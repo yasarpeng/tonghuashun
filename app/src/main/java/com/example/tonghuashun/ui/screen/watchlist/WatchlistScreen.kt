@@ -1,11 +1,12 @@
 package com.example.tonghuashun.ui.screen.watchlist
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,8 +15,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,31 +36,38 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.rememberScrollState
+import com.example.tonghuashun.ui.component.LocalTableScroll
+import com.example.tonghuashun.ui.component.THSDataRow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.tonghuashun.data.model.MarketIndex
+import com.example.tonghuashun.ui.component.THSIconButton
+import com.example.tonghuashun.ui.component.THSPageHeader
+import com.example.tonghuashun.ui.component.THSTabRow
 import com.example.tonghuashun.ui.component.WatchStockRow
 import com.example.tonghuashun.ui.theme.BackgroundGray
 import com.example.tonghuashun.ui.theme.CardWhite
 import com.example.tonghuashun.ui.theme.DividerGray
+import com.example.tonghuashun.ui.theme.THSLayout
+import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.ui.theme.TextPrimary
 import com.example.tonghuashun.ui.theme.TextSecondary
 import com.example.tonghuashun.ui.theme.TextTertiary
-import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.util.QuoteFormat
 
 private val watchTabs = listOf("自选股", "持仓股", "ETF", "持有股份")
@@ -73,6 +82,8 @@ fun WatchlistScreen(
     var tab by remember { mutableIntStateOf(0) }
     var showSearch by remember { mutableStateOf(false) }
 
+    val tableScroll = rememberScrollState()
+    CompositionLocalProvider(LocalTableScroll provides tableScroll) {
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -89,7 +100,9 @@ fun WatchlistScreen(
             HorizontalDivider(color = DividerGray)
         }
         item { AddStockRow(onClick = { showSearch = true }) }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(THSLayout.PageBottom)) }
+    }
+
     }
 
     if (showSearch) {
@@ -110,31 +123,39 @@ fun WatchlistScreen(
 
 @Composable
 private fun WatchTopBar(onSearch: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(THSRed)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Filled.Menu, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.weight(1f))
-        Text("同花顺自选", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.weight(1f))
-        Icon(
-            Icons.Filled.Search, contentDescription = "搜索", tint = Color.White,
-            modifier = Modifier.size(24.dp).clickable(onClick = onSearch),
-        )
-    }
+    THSPageHeader(title = "同花顺自选", navigation = {
+        Icon(Icons.Filled.Menu, contentDescription = null, tint = Color.White,
+            modifier = Modifier.padding(12.dp).size(24.dp))
+    }, actions = { THSIconButton(Icons.Filled.Search, "搜索股票", onSearch) })
 }
 
 @Composable
 private fun IndexBar(indices: List<MarketIndex>) {
+    if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) {
+        LazyRow(Modifier.fillMaxWidth().background(CardWhite),
+            contentPadding = PaddingValues(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            items(indices.take(3), key = { it.code }) { index ->
+                val color = QuoteFormat.colorOf(index.change)
+                Column(Modifier.width(180.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(index.name, color = TextSecondary, fontSize = 11.sp, maxLines = 1)
+                    Text(QuoteFormat.price(index.point), color = color, fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(QuoteFormat.signed(index.change), color = color, fontSize = 10.sp, maxLines = 1)
+                        Text(QuoteFormat.percent(index.changePercent), color = color, fontSize = 10.sp, maxLines = 1)
+                    }
+                }
+            }
+        }
+        return
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         indices.take(3).forEach { idx ->
@@ -142,7 +163,7 @@ private fun IndexBar(indices: List<MarketIndex>) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(idx.name, color = TextSecondary, fontSize = 11.sp, maxLines = 1)
                 Text(QuoteFormat.price(idx.point), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap)) {
                     Text(QuoteFormat.signed(idx.change), color = color, fontSize = 10.sp)
                     Text(QuoteFormat.percent(idx.changePercent), color = color, fontSize = 10.sp)
                 }
@@ -162,59 +183,21 @@ private fun IndexBar(indices: List<MarketIndex>) {
 
 @Composable
 private fun WatchTabRow(selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        watchTabs.forEachIndexed { i, tab ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    tab,
-                    color = if (i == selected) TextPrimary else TextSecondary,
-                    fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.clickable { onSelect(i) },
-                )
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .width(20.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (i == selected) THSRed else Color.Transparent),
-                )
-            }
-        }
-    }
+    THSTabRow(tabs = watchTabs, selected = selected, onSelect = onSelect)
 }
 
 @Composable
 private fun WatchListHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // 左侧：编辑表头 / 自选设置（对齐同花顺自选页工具栏）
-        Icon(
-            Icons.Filled.Edit, contentDescription = "编辑",
-            tint = TextSecondary, modifier = Modifier.size(18.dp).clickable { },
-        )
-        Spacer(Modifier.width(16.dp))
-        Icon(
-            Icons.Filled.Tune, contentDescription = "设置",
-            tint = TextSecondary, modifier = Modifier.size(18.dp).clickable { },
-        )
-        Spacer(Modifier.weight(1f))
-        Text("多股同列", color = TextSecondary, fontSize = 12.sp)
-        Spacer(Modifier.weight(1f))
-        Text("涨幅", color = TextSecondary, fontSize = 12.sp)
+    THSDataRow(Modifier.fillMaxWidth().background(CardWhite).padding(horizontal = THSLayout.PageGutter),
+        verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1.25f), verticalAlignment = Alignment.CenterVertically) {
+            THSIconButton(Icons.Filled.Edit, "编辑", {}, TextSecondary)
+            THSIconButton(Icons.Filled.Tune, "设置", {}, TextSecondary)
+        }
+        Text("多股同列", color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1.3f))
+        Text("涨幅", color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.End,
+            modifier = Modifier.weight(0.9f))
     }
     HorizontalDivider(color = DividerGray)
 }
@@ -317,19 +300,19 @@ private fun SearchResultRow(
             Text(stock.name, color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 15.sp)
             Text(stock.fullCode, color = TextTertiary, fontSize = 11.sp)
         }
-        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 12.dp)) {
+        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = THSLayout.PageGutter)) {
             Text(QuoteFormat.price(stock.price), color = color, fontSize = 14.sp)
             Text(QuoteFormat.percent(stock.changePercent), color = color, fontSize = 11.sp)
         }
         if (added) {
             Text(
                 "已添加", color = TextTertiary, fontSize = 12.sp,
-                modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BackgroundGray).padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BackgroundGray).padding(horizontal = THSLayout.PageGutter, vertical = 6.dp),
             )
         } else {
             Text(
                 "+ 添加", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(THSRed).clickable(onClick = onAdd).padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(THSRed).clickable(onClick = onAdd).padding(horizontal = THSLayout.PageGutter, vertical = 6.dp),
             )
         }
     }

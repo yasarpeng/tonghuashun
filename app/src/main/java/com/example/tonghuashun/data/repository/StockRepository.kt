@@ -123,8 +123,26 @@ class StockRepository @Inject constructor(
         Sector("券商", 1.98, "东方财富"),
     )
 
-    /** 资讯（静态展示） */
-    fun getNews(): List<NewsItem> = listOf(
+    /**
+     * 资讯：新浪 7x24 财经直播（动态实时拉取）。
+     * category 对应资讯页顶部分类下标（要闻/快讯/深度研究/概念广场/视）。
+     * 新浪直播以 zhibo_id 区分频道、tag_id 区分子类；接口失败时回退到静态示例。
+     */
+    suspend fun getNews(category: Int = 0): List<NewsItem> {
+        // 频道映射：要闻=全球直播全部, 快讯=全球直播全部(刷新更频繁), 深度/概念/视 暂用同源不同 tag
+        val (zhiboId, tagId) = when (category) {
+            0 -> 152 to 0      // 要闻
+            1 -> 152 to 0      // 快讯（7x24）
+            2 -> 152 to 6      // 深度研究 -> 「研报」类
+            3 -> 152 to 2      // 概念广场 -> 「市场」类
+            else -> 152 to 0   // 视 / 其他
+        }
+        val list = dataSource.getNews(zhiboId = zhiboId, tagId = tagId, pageSize = 30)
+        return list.ifEmpty { fallbackNews() }
+    }
+
+    /** 接口不可用时的静态兜底资讯 */
+    private fun fallbackNews(): List<NewsItem> = listOf(
         NewsItem("1", "商务部公布中美贸易理事会和\"300亿对300亿\"对等降税框架有关情况", "同花顺7x24快讯", "2小时前", "全民关注"),
         NewsItem("2", "A股三大股指齐跌，算力硬件下挫，光模块龙头跌超8%", "中国证券报", "1小时前", null),
         NewsItem("3", "美股期货、黄金、白银集体跳水！伊朗称已为与美战事重开做好准备", "同花顺7x24快讯", "1小时前", null),

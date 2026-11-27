@@ -1,5 +1,7 @@
 package com.example.tonghuashun.ui.screen.market
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FilterAlt
@@ -32,10 +34,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,17 +47,18 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.tonghuashun.data.model.MarketIndex
-import com.example.tonghuashun.data.model.Stock
+import com.example.tonghuashun.ui.component.StockRow
+import com.example.tonghuashun.ui.component.THSTabRow
 import com.example.tonghuashun.ui.theme.BackgroundGray
 import com.example.tonghuashun.ui.theme.CardWhite
 import com.example.tonghuashun.ui.theme.DividerGray
 import com.example.tonghuashun.ui.theme.StockDown
 import com.example.tonghuashun.ui.theme.StockUp
+import com.example.tonghuashun.ui.theme.THSLayout
+import com.example.tonghuashun.ui.theme.THSRed
 import com.example.tonghuashun.ui.theme.TextPrimary
 import com.example.tonghuashun.ui.theme.TextSecondary
 import com.example.tonghuashun.ui.theme.TextTertiary
-import com.example.tonghuashun.ui.theme.THSRed
-import com.example.tonghuashun.ui.component.StockRow
 import com.example.tonghuashun.util.QuoteFormat
 
 private val categories = listOf("全球", "A股", "港股", "美股", "ETF", "期货", "黄金", "可转债", "其他")
@@ -95,13 +96,13 @@ fun MarketScreen(
         item { OpenStatusRow() }
         item { IndexCardsRow(state.indices, onStockClick) }
         item { RiseFallBar() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { NoonReviewCard() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { MarketEntryRow() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { CompareCardsRow() }
-        item { Spacer(Modifier.height(10.dp)) }
+        item { Spacer(Modifier.height(THSLayout.ItemGap)) }
         item { RankHeader(rankTab) { rankTab = it } }
         val list = if (rankTab == 0) state.gainers else state.losers
         items(list, key = { it.fullCode }) { stock ->
@@ -110,7 +111,7 @@ fun MarketScreen(
             }
             HorizontalDivider(color = DividerGray)
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(THSLayout.PageBottom)) }
     }
 }
 
@@ -120,22 +121,23 @@ private fun MarketTopBar() {
         modifier = Modifier
             .fillMaxWidth()
             .background(THSRed)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .heightIn(min = THSLayout.HeaderHeight)
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
         Text("同花顺", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(34.dp)
-                .clip(RoundedCornerShape(17.dp))
+                .height(THSLayout.SearchHeight)
+                .clip(RoundedCornerShape(18.dp))
                 .background(Color.White)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = THSLayout.PageGutter),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
         ) {
-            Text("资产分析，灵活控制仓位", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text("资产分析，灵活控制仓位", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Box(Modifier.width(1.dp).height(16.dp).background(DividerGray))
             Text("搜索", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
         }
@@ -145,54 +147,13 @@ private fun MarketTopBar() {
 
 @Composable
 private fun CategoryRow(selected: Int, onSelect: (Int) -> Unit) {
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(THSRed),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        items(categories.size) { i ->
-            Text(
-                categories[i],
-                color = if (i == selected) Color.White else Color(0xCCFFFFFF),
-                fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                fontSize = if (i == selected) 17.sp else 15.sp,
-                modifier = Modifier.clickable { onSelect(i) },
-            )
-        }
-    }
+    THSTabRow(tabs = categories, selected = selected, onSelect = onSelect,
+        scrollable = true, inverse = true, showIndicator = false)
 }
 
 @Composable
 private fun TopTabRow(selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardWhite)
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-    ) {
-        topTabs.forEachIndexed { i, tab ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    tab,
-                    color = if (i == selected) TextPrimary else TextSecondary,
-                    fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = 16.sp,
-                    modifier = Modifier.clickable { onSelect(i) },
-                )
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .width(22.dp)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (i == selected) THSRed else Color.Transparent),
-                )
-            }
-        }
-    }
+    THSTabRow(tabs = topTabs, selected = selected, onSelect = onSelect)
 }
 
 @Composable
@@ -201,7 +162,7 @@ private fun OpenStatusRow() {
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column {
@@ -220,22 +181,22 @@ private fun OpenStatusRow() {
 private fun IndexCardsRow(indices: List<MarketIndex>, onStockClick: (String) -> Unit) {
     LazyRow(
         modifier = Modifier.background(CardWhite),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(horizontal = THSLayout.PageGutter, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(THSLayout.ItemGap),
     ) {
         items(indices, key = { it.code }) { idx ->
             val color = QuoteFormat.colorOf(idx.change)
             Column(
                 modifier = Modifier
                     .width(130.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(THSLayout.CardRadius))
                     // 同花顺大盘卡片底色跟随涨跌（淡红/淡绿），而不是中性灰
                     .background(color.copy(alpha = 0.08f))
                     .clickable { onStockClick(idx.code) }
                     .padding(10.dp),
             ) {
                 Text(idx.name, color = TextPrimary, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(THSLayout.ItemGap))
                 Text(QuoteFormat.price(idx.point), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -253,13 +214,13 @@ private fun RiseFallBar() {
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = 8.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("跌4800", color = StockDown, fontWeight = FontWeight.Bold)
             Text("涨703", color = StockUp, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -283,7 +244,7 @@ private fun NoonReviewCard() {
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(12.dp),
+            .padding(horizontal = THSLayout.PageGutter, vertical = THSLayout.ContentPadding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -302,7 +263,7 @@ private fun NoonReviewCard() {
         }
         Spacer(Modifier.height(8.dp))
         Text("A股午评：创业板指低开低走大跌4.32%，CPO、元件、光纤...", color = TextPrimary, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyLarge, maxLines = 2)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(THSLayout.ItemGap))
         Text("A股三大指数早盘集体下跌，截至午盘，上证指数跌1.74%，深证成指跌...", color = TextSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
     }
 }
@@ -313,7 +274,7 @@ private fun MarketEntryRow() {
         modifier = Modifier
             .fillMaxWidth()
             .background(CardWhite)
-            .padding(vertical = 14.dp),
+            .padding(vertical = THSLayout.ContentPadding),
     ) {
         marketEntries.forEach { entry ->
             Column(
@@ -326,7 +287,7 @@ private fun MarketEntryRow() {
                 ) {
                     Icon(entry.icon, contentDescription = entry.label, tint = Color.White, modifier = Modifier.size(22.dp))
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(THSLayout.ItemGap))
                 Text(entry.label, fontSize = 11.sp, color = TextPrimary, maxLines = 1)
             }
         }
@@ -350,7 +311,7 @@ private fun CompareCardsRow() {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(THSLayout.CardRadius))
                     .background(CardWhite)
                     .clickable { }
                     .padding(10.dp),
@@ -371,7 +332,7 @@ private fun CompareCardsRow() {
 private fun RankHeader(selected: Int, onSelect: (Int) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().background(CardWhite)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = THSLayout.PageGutter, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("股票排行", color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
@@ -380,7 +341,7 @@ private fun RankHeader(selected: Int, onSelect: (Int) -> Unit) {
             Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(16.dp))
         }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = THSLayout.PageGutter, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             rankTabs.forEachIndexed { i, tab ->
@@ -392,7 +353,7 @@ private fun RankHeader(selected: Int, onSelect: (Int) -> Unit) {
                         .clip(RoundedCornerShape(4.dp))
                         .background(if (i == selected) Color(0x22E63946) else Color.Transparent)
                         .clickable { onSelect(i) }
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                        .padding(horizontal = THSLayout.PageGutter, vertical = 4.dp),
                 )
             }
         }

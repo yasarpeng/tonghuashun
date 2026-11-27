@@ -68,6 +68,17 @@ object NetworkModule {
             .addConverterFactory(ScalarsConverterFactory.create())
             .build()
 
+    /** 新浪 7x24 资讯直播（UTF-8 JSON） */
+    @Provides
+    @Singleton
+    @Named("sinaNews")
+    fun provideSinaNewsRetrofit(client: OkHttpClient): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://zhibo.sina.com.cn/")
+            .client(client)
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .build()
+
     @Provides
     @Singleton
     fun provideSinaApi(@Named("sina") retrofit: Retrofit): SinaApi =
@@ -82,4 +93,9 @@ object NetworkModule {
     @Singleton
     fun provideTencentQtApi(@Named("qt") retrofit: Retrofit): TencentQtApi =
         retrofit.create(TencentQtApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideSinaNewsApi(@Named("sinaNews") retrofit: Retrofit): SinaNewsApi =
+        retrofit.create(SinaNewsApi::class.java)
 }

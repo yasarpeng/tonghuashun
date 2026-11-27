@@ -6,6 +6,11 @@ import androidx.compose.ui.graphics.Color
 val THSRed = Color(0xFFE63946)
 val THSRedDark = Color(0xFFC1121F)
 
+// 券商交易页：参考持仓界面的亮红页头、深红盈亏和浅灰底。
+val TradeHeaderRed = Color(0xFFF12F37)
+val TradeProfitRed = Color(0xFFCC3942)
+val TradePageBackground = Color(0xFFF5F5F5)
+
 // A股行情配色：红涨绿跌
 val StockUp = Color(0xFFF5222D)    // 涨 - 红
 val StockDown = Color(0xFF00A800)  // 跌 - 绿
